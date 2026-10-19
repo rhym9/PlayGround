@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#05010f">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305010f'/%3E%3Cpath d='M32 8 56 32 32 56 8 32Z' fill='%2335f4ff'/%3E%3Cpath d='M32 18 46 32 32 46 18 32Z' fill='%23ff2d95'/%3E%3C/svg%3E">
+  <meta name="description" content="Neon Run - a fast, touch-first 3D endless runner for phones and tablets.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>NEON RUN // 3D</title>
+  <style>
+    :root {
+      --cyan: #35f4ff;
+      --pink: #ff2d95;
+      --violet: #8b5cff;
+      --gold: #ffd166;
+      --ink: #05010f;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--ink);
+      color: #f7f2ff;
+      font-family: "Trebuchet MS", "Segoe UI", system-ui, -apple-system, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    body {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0) 42%, rgba(2, 0, 10, 0.55) 100%),
+        linear-gradient(to bottom, rgba(3, 0, 12, 0.35), rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0) 72%, rgba(3, 0, 12, 0.5));
+      z-index: 2;
+    }
+
+    .hud {
+      position: fixed;
+      z-index: 4;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: calc(var(--safe-top) + 14px) calc(var(--safe-right) + 18px) 0 calc(var(--safe-left) + 18px);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    .hud[hidden] { display: flex; opacity: 0; }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 74px;
+      text-shadow: 0 0 18px rgba(53, 244, 255, 0.45);
+    }
+
+    .stat.right { align-items: flex-end; text-align: right; }
+
+    .label {
+      font-size: 9px;
+      letter-spacing: 0.32em;
+      color: rgba(214, 236, 255, 0.62);
+    }
+
+    .value {
+      font-size: clamp(20px, 5.4vw, 30px);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .best .value { color: var(--cyan); }
+
+    .hearts {
+      display: flex;
+      gap: 7px;
+      padding-top: 5px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .heart {
+      width: 15px;
+      height: 15px;
+      transform: rotate(45deg);
+      border-radius: 3px;
+      background: linear-gradient(135deg, var(--pink), #ff7ac8);
+      box-shadow: 0 0 12px rgba(255, 45, 149, 0.9), inset 0 0 4px rgba(255, 255, 255, 0.75);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .heart.dead {
+      opacity: 0.16;
+      transform: rotate(45deg) scale(0.82);
+      box-shadow: none;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: calc(var(--safe-top) + 24px) calc(var(--safe-right) + 24px) calc(var(--safe-bottom) + 24px) calc(var(--safe-left) + 24px);
+      text-align: center;
+      background:
+        radial-gradient(ellipse at 50% 78%, rgba(255, 45, 149, 0.12), rgba(0, 0, 0, 0) 55%),
+        radial-gradient(ellipse at 50% 20%, rgba(53, 244, 255, 0.09), rgba(0, 0, 0, 0) 60%),
+        rgba(4, 1, 15, 0.34);
+      transition: opacity 0.3s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .badge {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: clamp(8px, 2.1vw, 11px);
+      letter-spacing: 0.4em;
+      color: var(--cyan);
+      border: 1px solid rgba(53, 244, 255, 0.4);
+      background: rgba(5, 20, 34, 0.45);
+      border-radius: 999px;
+      padding: 7px 16px 7px 19px;
+      box-shadow: 0 0 26px rgba(53, 244, 255, 0.16) inset, 0 0 18px rgba(53, 244, 255, 0.12);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(52px, 17vw, 132px);
+      line-height: 0.82;
+      font-weight: 900;
+      letter-spacing: 0.015em;
+      text-transform: uppercase;
+      color: #f8f4ff;
+      text-shadow:
+        0 0 12px rgba(255, 255, 255, 0.45),
+        0 0 44px rgba(139, 92, 255, 0.7),
+        0 0 90px rgba(255, 45, 149, 0.45);
+    }
+
+    h1 span {
+      display: block;
+      background: linear-gradient(92deg, var(--cyan) 5%, #9a7dff 45%, var(--pink) 95%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 0 22px rgba(255, 45, 149, 0.55));
+    }
+
+    .tagline {
+      margin: 4px 0 0;
+      max-width: 30rem;
+      font-size: clamp(13px, 3.4vw, 17px);
+      line-height: 1.55;
+      letter-spacing: 0.03em;
+      color: rgba(233, 227, 255, 0.78);
+    }
+
+    .tagline b { color: #fff; font-weight: 700; }
+
+    .play {
+      margin-top: 10px;
+      border: 0;
+      border-radius: 999px;
+      padding: 17px 46px;
+      font-family: inherit;
+      font-size: clamp(13px, 3.4vw, 16px);
+      font-weight: 800;
+      letter-spacing: 0.24em;
+      color: #05010f;
+      background: linear-gradient(95deg, var(--cyan), #b3a1ff 48%, var(--pink));
+      background-size: 160% 100%;
+      box-shadow:
+        0 10px 34px rgba(53, 244, 255, 0.28),
+        0 0 60px rgba(255, 45, 149, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      cursor: pointer;
+      transition: transform 0.16s ease, background-position 0.5s ease, box-shadow 0.25s ease;
+    }
+
+    .play:hover { background-position: 100% 0; box-shadow: 0 12px 42px rgba(53, 244, 255, 0.42), 0 0 80px rgba(255, 45, 149, 0.42); }
+    .play:active { transform: scale(0.96); }
+    .play:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+
+    .hint {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: rgba(203, 219, 255, 0.5);
+      text-transform: uppercase;
+    }
+
+    .hint b { color: var(--cyan); font-weight: 600; }
+
+    .controls {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 9px;
+      letter-spacing: 0.24em;
+      color: rgba(214, 236, 255, 0.55);
+      text-transform: uppercase;
+    }
+
+    .controls span { display: inline-flex; align-items: center; gap: 7px; }
+    .key {
+      border: 1px solid rgba(214, 236, 255, 0.3);
+      border-radius: 5px;
+      padding: 3px 7px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .gameover-title {
+      margin: 0;
+      font-size: clamp(34px, 11vw, 72px);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 0 14px rgba(255, 45, 149, 0.9), 0 0 60px rgba(255, 45, 149, 0.55);
+    }
+
+    .gameover-score {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: clamp(42px, 13vw, 84px);
+      font-weight: 800;
+      color: var(--cyan);
+      text-shadow: 0 0 30px rgba(53, 244, 255, 0.65);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .gameover-score small {
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      color: rgba(214, 236, 255, 0.55);
+      text-shadow: none;
+    }
+
+    .new-best {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: 0.34em;
+      color: var(--gold);
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(255, 209, 102, 0.6);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .new-best.show { opacity: 1; }
+
+    .flash {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 62%, rgba(255, 45, 149, 0.55), rgba(255, 45, 149, 0) 55%);
+      opacity: 0;
+      transition: opacity 0.18s ease;
+    }
+
+    .flash.on { opacity: 1; transition-duration: 0.04s; }
+
+    .rotate-note {
+      position: fixed;
+      z-index: 6;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(4, 1, 15, 0.9);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0.24em;
+      text-align: center;
+      padding: 30px;
+      color: rgba(233, 227, 255, 0.8);
+    }
+
+    @media (max-width: 520px) {
+      .overlay { gap: 13px; }
+      .tagline { max-width: 22rem; }
+      .play { padding: 15px 38px; }
+      .controls { display: none; }
+    }
+
+    @media (max-height: 620px) and (orientation: landscape) {
+      .overlay { gap: 8px; }
+      h1 { font-size: clamp(44px, 13vh, 90px); }
+      .tagline { font-size: 12px; line-height: 1.4; }
+      .play { margin-top: 2px; padding: 12px 36px; }
+      .hint, .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" aria-label="Neon Run 3D game canvas"></canvas>
+  <div class="vignette"></div>
+  <div class="flash" id="flash"></div>
+
+  <header class="hud" id="hud" hidden>
+    <div class="stat">
+      <span class="label">SCORE</span>
+      <span class="value" id="score">0</span>
+    </div>
+    <div class="hearts" id="hearts" aria-label="Shield integrity">
+      <i class="heart"></i><i class="heart"></i><i class="heart"></i>
+    </div>
+    <div class="stat right best">
+      <span class="label">BEST</span>
+      <span class="value" id="best">0</span>
+    </div>
+  </header>
+
+  <section class="overlay" id="start-screen">
+    <div class="badge">MOBILE 3D // WEBGL</div>
+    <h1>Neon<span>Run</span></h1>
+    <p class="tagline">Thread the grid at light speed.<br><b>Swipe</b> to change lanes · <b>Tap</b> to jump.</p>
+    <button class="play" id="play-button" type="button">START RUN</button>
+    <div class="hint">BEST <b id="start-best">0</b> &nbsp;·&nbsp; 3 SHIELDS</div>
+    <div class="controls">
+      <span><span class="key">←</span><span class="key">→</span> STEER</span>
+      <span><span class="key">SPACE</span> JUMP</span>
+    </div>
+  </section>
+
+  <section class="overlay hidden" id="game-over">
+    <div class="badge">SIGNAL LOST</div>
+    <h2 class="gameover-title">Run Ended</h2>
+    <div class="gameover-score"><span id="final-score">0</span><small>PTS</small></div>
+    <div class="new-best" id="new-best">New personal best</div>
+    <button class="play" id="restart-button" type="button">RUN AGAIN</button>
+    <div class="hint">BEST <b id="final-best">0</b></div>
+  </section>
+
+  <script type="module" src="/assets/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "neon-run",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Neon Run - a touch-first 3D endless runner built with Three.js",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs dist"
+  },
+  "dependencies": {
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
